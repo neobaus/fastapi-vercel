@@ -1,0 +1,78 @@
+# name: Staging CI/CD for Backend
+
+# on:
+#   workflow_dispatch:
+
+# permissions:
+#   id-token: write
+#   contents: read
+
+# jobs:
+#   build_and_deploy:
+#     runs-on: arm-runner-v3
+
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
+
+#       - name: Get Git Commit Hash
+#         id: git-info
+#         run: echo "commit_hash=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT" # Set commit hash in environment
+
+#       - name: Configure AWS credentials using OIDC
+#         uses: aws-actions/configure-aws-credentials@v3
+#         with:
+#           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/neobaus-staging-cicd
+#           aws-region: ${{ secrets.AWS_REGION }}
+
+#       - name: Install SSH Client
+#         run: sudo apt-get install -y openssh-client
+
+#       - name: Add SSH Key and Configure Known Hosts
+#         run: |
+#           mkdir -p ~/.ssh
+#           echo "${{ secrets.STAGING_EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+#           chmod 600 ~/.ssh/id_rsa
+#           ssh-keyscan -H ${{ secrets.STAGING_EC2_PUBLIC_IP }} >> ~/.ssh/known_hosts
+
+#       - name: Check and Install AWS CLI
+#         run: |
+#           if ! aws --version; then
+#             curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+#             unzip awscliv2.zip
+#             sudo ./aws/install
+#           else
+#             echo "AWS CLI is already installed."
+#           fi
+
+#       - name: Log in to Amazon ECR
+#         run: |
+#           aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+
+#       - name: Build Docker Image
+#         run: |
+#           docker build -f Dockerfile -t neobaus-backend:latest .
+#           docker tag neobaus-backend:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/staging-backend-repo:neobaus-backend-${{ steps.git-info.outputs.commit_hash }}
+#           docker tag neobaus-backend:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/staging-backend-repo:latest
+
+#       - name: Push Docker Image with Commit Hash
+#         run: |
+#           docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/staging-backend-repo:neobaus-backend-${{ steps.git-info.outputs.commit_hash }}
+
+#       - name: Push Docker Image with Latest Tag
+#         run: |
+#           docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/staging-backend-repo:latest
+
+#       - name: SSH into EC2 and run commands
+#         run: |
+#           ssh -v -i "~/.ssh/id_rsa" ec2-user@${{ secrets.STAGING_EC2_PUBLIC_IP }} << EOF
+#             aws ecr get-login-password --region ap-southeast-1 | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+#             cd neobaus-staging
+#             docker-compose down
+#             docker rmi 992382478386.dkr.ecr.ap-southeast-1.amazonaws.com/staging-backend-repo:latest
+#             docker-compose pull
+#             docker-compose up -d
+#           EOF
+
+#       - name: Clean up local Docker images
+#         run: docker system prune -f
