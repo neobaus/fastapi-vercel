@@ -25,10 +25,40 @@ Python Basics
 - Rest
 
 Framework: FastAPI
+
 Database:
-Database Migration - Alembic
-Database - SQLite - PostgreSQL - DynamoDB - Redis - MongoDB
 
-Messaging: - Celery - Kafka - RabbitMQ - SNS - SQS
+- Database Migration - Alembic
+  Database
+- SQLite
+- PostgreSQL
+- DynamoDB
+- Redis
+- MongoDB
 
-AI - OpenAI - TensorFlow - PyTorch - numpy - pandas - langchain - langgraph - prompting - MCP - AI Agents
+Messaging:
+
+- Celery
+- Kafka
+- RabbitMQ
+- SNS
+- SQS
+
+Automation
+
+Security
+
+Monitoring
+
+AI:
+
+- OpenAI
+- TensorFlow
+- PyTorch
+- numpy
+- pandas
+- langchain
+- langgraph
+- prompting
+- MCP
+- AI Agents
